@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Onboarding Ledger — StayVista",
+  title: "Onboarding Tracker — StayVista",
   description: "Tracks every property from acquisition through go-live and launch.",
 };
 
