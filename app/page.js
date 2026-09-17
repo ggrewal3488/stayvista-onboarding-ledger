@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import {
   PROPERTY_TYPES, AGREEMENT_TYPES, AGREEMENT_STATUSES, ACQUISITION_AGENTS,
   OPS_OWNERS, YES_NO_NA, STAFFING_STATUSES, STAFF_INV_AGENTS, INVENTORY_STATUSES,
   TECH_STATUSES, TECH_AGENTS, ACCOUNT_MANAGERS, OPS_SIM_STATUSES,
   overallStatus, preOnboardingComplete,
 } from "../lib/constants";
+import { isPartLocked, PART_LABELS } from "../lib/access";
 
 function fmtDate(iso) {
   if (!iso) return "—";
@@ -36,6 +38,7 @@ function Options({ list, includeBlank }) {
 }
 
 export default function Page() {
+  const { data: session, status } = useSession();
   const [properties, setProperties] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [conn, setConn] = useState("connecting");
@@ -65,10 +68,11 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
+    if (status !== "authenticated") return;
     load(false);
     const t = setInterval(() => load(true), 8000);
     return () => clearInterval(t);
-  }, [load]);
+  }, [load, status]);
 
   async function createProperty(data) {
     try {
@@ -88,6 +92,7 @@ export default function Page() {
   }
 
   async function saveField(id, patch) {
+    const prevProps = properties;
     setProperties((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
     try {
       const res = await fetch("/api/properties/" + id, {
@@ -95,13 +100,39 @@ export default function Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setProperties(prevProps);
+        toast(json.error || "Couldn't save — try again.");
+        return;
+      }
     } catch {
+      setProperties(prevProps);
       toast("Couldn't save — try again.");
     }
   }
 
   const current = view !== "dashboard" ? properties.find((p) => p.id === view) : null;
+  const role = session?.user?.role || "editor";
+
+  if (status === "loading") {
+    return <div className="wrap"><p className="status-line">Loading…</p></div>;
+  }
+
+  if (status !== "authenticated") {
+    return (
+      <div className="wrap">
+        <div className="signin-wrap" style={{ minHeight: "60vh" }}>
+          <div className="signin-card">
+            <p className="eyebrow">StayVista Operations</p>
+            <h1 className="title" style={{ marginBottom: 4 }}>Onboarding Tracker</h1>
+            <p className="sub" style={{ marginBottom: 24 }}>Sign in with your StayVista Google account to continue.</p>
+            <button className="primary" type="button" style={{ width: "100%" }} onClick={() => signIn("google")}>Sign in with Google</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="wrap">
@@ -112,6 +143,13 @@ export default function Page() {
           <p className="sub">Acquisition through go-live — one record per property, from signed agreement to post-launch trackers.</p>
         </div>
         <div className="top-actions">
+          <div className="user-bar">
+            <div className="user-info">
+              <span className="user-name">{session.user?.name || session.user?.email}</span>
+              <span className={"role-pill" + (role === "admin" ? " admin" : "")}>{role === "admin" ? "Admin" : "Editor"}</span>
+            </div>
+            <button className="ghost" type="button" onClick={() => signOut({ callbackUrl: "/signin" })}>Sign out</button>
+          </div>
           <button className="primary" type="button" onClick={() => setModalOpen(true)}>+ New property</button>
         </div>
       </header>
@@ -125,6 +163,7 @@ export default function Page() {
       {current && (
         <Detail
           property={current}
+          role={role}
           onBack={() => setView("dashboard")}
           onSave={(patch) => saveField(current.id, patch)}
           toast={toast}
@@ -240,11 +279,25 @@ function useDebouncedSave(onSave, delay = 700) {
   };
 }
 
-function Detail({ property: p, onBack, onSave, toast }) {
+function Detail({ property: p, role, onBack, onSave, toast }) {
   const debouncedSave = useDebouncedSave(onSave);
   const [noteText, setNoteText] = useState("");
+  const [audit, setAudit] = useState([]);
   const os = overallStatus(p);
   const poc = preOnboardingComplete(p);
+  const isAdmin = role === "admin";
+  const part1Locked = !isAdmin && isPartLocked(p, 1);
+  const part2Locked = !isAdmin && isPartLocked(p, 2);
+  const part3Locked = !isAdmin && isPartLocked(p, 3);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/properties/" + p.id + "/audit")
+      .then((r) => (r.ok ? r.json() : { entries: [] }))
+      .then((json) => { if (!cancelled) setAudit(json.entries || []); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [p.id]);
 
   function field(field, value) { onSave({ [field]: value }); }
   function debField(f) { return (e) => debouncedSave(f, e.target.value); }
@@ -276,9 +329,10 @@ function Detail({ property: p, onBack, onSave, toast }) {
       <p className="save-note">Changes save automatically as you edit.</p>
 
       <div className="section">
-        <h4>Part 1 — Acquisition</h4>
+        <h4>{PART_LABELS[1]}</h4>
         <p className="section-sub">Where this property came from and its agreement.</p>
-        <div className="field-grid">
+        {part1Locked && <div className="lock-banner">🔒 Locked — more than 24 hours since this section was first saved. Only an admin can edit it now.</div>}
+        <fieldset disabled={part1Locked} className="field-grid">
           <div className="field"><label>Property name</label><input defaultValue={p.propertyName} onChange={debField("propertyName")} /></div>
           <div className="field"><label>Property type</label><select defaultValue={p.propertyType || ""} onChange={selField("propertyType")}><Options list={PROPERTY_TYPES} includeBlank /></select></div>
           <div className="field"><label>Bedrooms</label><input type="number" defaultValue={p.bedrooms || ""} onChange={debField("bedrooms")} /></div>
@@ -287,17 +341,19 @@ function Detail({ property: p, onBack, onSave, toast }) {
           <div className="field"><label>Acquisition date</label><input type="date" defaultValue={p.acquisitionDate || ""} onChange={selField("acquisitionDate")} /></div>
           <div className="field"><label>Agreement type</label><select defaultValue={p.agreementType || ""} onChange={selField("agreementType")}><Options list={AGREEMENT_TYPES} includeBlank /></select></div>
           <div className="field"><label>Agreement status</label><select defaultValue={p.agreementStatus || ""} onChange={selField("agreementStatus")}><Options list={AGREEMENT_STATUSES} includeBlank /></select></div>
-        </div>
+        </fieldset>
       </div>
 
       <div className="section">
-        <h4>Part 2 — Pre-onboarding</h4>
+        <h4>{PART_LABELS[2]}</h4>
         <p className="section-sub">Audits, staffing, inventory and tech sign-off before go-live.</p>
         <div className="formula-row">
           <div className="formula-card box-sky"><div className="fl">Overall status</div><span className={"pill " + statusPillClass(os)}>{os}</span></div>
           <div className="formula-card box-shine"><div className="fl">Pre-onboarding complete</div><span className={"pill " + (poc === "Complete" ? "complete" : "pending")}>{poc}</span></div>
         </div>
 
+        {part2Locked && <div className="lock-banner">🔒 Locked — more than 24 hours since this section was first saved. Only an admin can edit it now.</div>}
+        <fieldset disabled={part2Locked} style={{ border: "none", padding: 0, margin: 0 }}>
         <div className="field-grid">
           <div className="field"><label>Ops pre-handover date</label><input type="date" defaultValue={p.opsPreHandoverDate || ""} onChange={selField("opsPreHandoverDate")} /></div>
           <div className="field"><label>Ops pre-handover owner</label><select defaultValue={p.opsPreHandoverOwner || ""} onChange={selField("opsPreHandoverOwner")}><Options list={OPS_OWNERS} includeBlank /></select></div>
@@ -356,6 +412,7 @@ function Detail({ property: p, onBack, onSave, toast }) {
           <div className="field"><label>Target go-live date</label><input type="date" defaultValue={p.targetGoLiveDate || ""} onChange={selField("targetGoLiveDate")} /></div>
           <div className="field"><label>Go-live start date</label><input type="date" defaultValue={p.goLiveStartDate || ""} onChange={selField("goLiveStartDate")} /></div>
         </div>
+        </fieldset>
 
         <div style={{ marginTop: 18 }}>
           <label style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--ink-soft)" }}>AGM notes</label>
@@ -376,14 +433,35 @@ function Detail({ property: p, onBack, onSave, toast }) {
       </div>
 
       <div className="section">
-        <h4>Part 3 — Launch</h4>
+        <h4>{PART_LABELS[3]}</h4>
         <p className="section-sub">Ops simulation and post-launch handoff.</p>
-        <div className="field-grid">
+        {part3Locked && <div className="lock-banner">🔒 Locked — more than 24 hours since this section was first saved. Only an admin can edit it now.</div>}
+        <fieldset disabled={part3Locked} className="field-grid">
           <div className="field"><label>Ops simulation audit status</label><select defaultValue={p.opsSimAuditStatus || ""} onChange={selField("opsSimAuditStatus")}><Options list={OPS_SIM_STATUSES} includeBlank /></select></div>
           <div className="field"><label>Done by (names &amp; roles)</label><input defaultValue={p.opsSimAuditDoneBy} onChange={debField("opsSimAuditDoneBy")} /></div>
           <div className="field"><label>Ops simulation details / link</label><input defaultValue={p.opsSimDetails} onChange={debField("opsSimDetails")} /></div>
           <div className="field"><label>Post-launch trackers created</label><select defaultValue={p.postLaunchTrackersCreated || ""} onChange={selField("postLaunchTrackersCreated")}><Options list={YES_NO_NA} includeBlank /></select></div>
           <div className="field"><label>Post-launch trackers link</label><input defaultValue={p.postLaunchTrackersLink} onChange={debField("postLaunchTrackersLink")} /></div>
+        </fieldset>
+      </div>
+
+      <div className="section">
+        <h4>Activity</h4>
+        <p className="section-sub">Every create, edit, note and delete on this property, most recent first.</p>
+        <div className="activity-log">
+          {audit.length === 0 && <div style={{ fontSize: 12.5, color: "var(--ink-faint)" }}>No activity recorded yet.</div>}
+          {audit.map((a) => (
+            <div className="activity-entry" key={a.id}>
+              <div className="ae-top">
+                <span className="ae-actor">{a.actor_email || "Unknown"}</span>
+                <span className={"ae-action ae-" + a.action}>{a.action.replace("_", " ")}</span>
+                <span className="ae-time">{new Date(a.created_at).toLocaleString("en-IN")}</span>
+              </div>
+              {a.action === "update" && a.changes && Object.keys(a.changes).length > 0 && (
+                <div className="ae-fields">{Object.keys(a.changes).join(", ")}</div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>

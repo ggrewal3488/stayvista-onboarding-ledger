@@ -167,3 +167,31 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .modal .ghost { background: rgba(255, 255, 255, 0.35); color: var(--box-ink); border: 1px solid rgba(30, 30, 30, 0.2); }
 
 @media (max-width: 400px) { .wrap { padding: 20px 16px 60px; } }
+
+/* Auth, roles, locks, activity log */
+.user-bar { display: flex; align-items: center; gap: 10px; }
+.user-info { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.user-name { font-size: 12.5px; color: var(--ink-soft); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.role-pill { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 8px; border-radius: 100px; background: var(--surface-2); color: var(--ink-soft); font-weight: 600; }
+.role-pill.admin { background: rgba(47, 91, 63, 0.16); color: var(--good); }
+
+.signin-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+.signin-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 30px 26px; max-width: 380px; width: 100%; box-shadow: var(--box-shadow); }
+.signin-error { background: rgba(138, 47, 34, 0.12); color: var(--bad); font-size: 12.5px; border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; }
+.signin-note { font-size: 11.5px; color: var(--ink-faint); text-align: center; margin: 14px 0 0; }
+
+.lock-banner { background: rgba(138, 90, 18, 0.12); color: var(--warn); font-size: 12.5px; font-weight: 600; border-radius: 8px; padding: 10px 13px; margin-bottom: 14px; }
+fieldset { border: none; padding: 0; margin: 0; }
+fieldset:disabled { opacity: 0.6; }
+fieldset[disabled] .field input, fieldset[disabled] .field select { cursor: not-allowed; }
+
+.activity-log { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+.activity-entry { border: 1px solid var(--line); border-radius: 8px; padding: 8px 11px; font-size: 12px; }
+.ae-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ae-actor { font-weight: 600; color: var(--ink); }
+.ae-action { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 7px; border-radius: 100px; background: var(--surface-2); color: var(--ink-soft); }
+.ae-action.ae-create { background: rgba(47, 91, 63, 0.16); color: var(--good); }
+.ae-action.ae-delete { background: rgba(138, 47, 34, 0.16); color: var(--bad); }
+.ae-action.ae-note_added { background: rgba(30, 111, 143, 0.14); color: var(--sv-sky); }
+.ae-time { color: var(--ink-faint); font-size: 11px; margin-left: auto; }
+.ae-fields { color: var(--ink-faint); font-size: 11px; margin-top: 4px; }
