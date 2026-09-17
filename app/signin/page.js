@@ -34,6 +34,7 @@ function SignInInner() {
         </button>
 
         <p className="signin-note">Restricted to @stayvista.com and @stayvista.co.in accounts.</p>
+        <p className="signin-note"><a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a></p>
       </div>
     </div>
   );

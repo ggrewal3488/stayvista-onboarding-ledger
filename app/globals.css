@@ -195,3 +195,14 @@ fieldset[disabled] .field input, fieldset[disabled] .field select { cursor: not-
 .ae-action.ae-note_added { background: rgba(30, 111, 143, 0.14); color: var(--sv-sky); }
 .ae-time { color: var(--ink-faint); font-size: 11px; margin-left: auto; }
 .ae-fields { color: var(--ink-faint); font-size: 11px; margin-top: 4px; }
+
+/* Privacy policy page */
+.legal { max-width: 720px; }
+.legal-updated { font-size: 12px; color: var(--ink-faint); margin: 4px 0 24px; }
+.legal-body { font-size: 14px; line-height: 1.65; color: var(--ink); }
+.legal-body h2 { font-family: var(--font-display); font-size: 18px; margin: 26px 0 8px; color: var(--ink); }
+.legal-body p { margin: 0 0 12px; }
+.legal-body ul { margin: 0 0 12px; padding-left: 20px; }
+.legal-body li { margin-bottom: 8px; }
+.legal-body code { background: var(--surface-2); padding: 1px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 12.5px; }
+.legal-body a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
