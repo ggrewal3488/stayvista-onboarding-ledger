@@ -1,4 +1,4 @@
-# Onboarding Ledger
+# Onboarding Tracker
 
 StayVista's property onboarding tracker — acquisition through go-live and launch, built with Next.js, Postgres and the StayVista brand (Cambria/Larken + Inter, Warm Black / SV-Bloom / SV-Shine / SV-Sky).
 
@@ -16,7 +16,7 @@ Without this, the app loads but every save will show an error.
 
 ### 2. Google Sheets auto-sync (optional)
 
-There is no export button — instead, every time a property is created, edited, or deleted, the backend automatically clears and rewrites a tab named **Onboarding Ledger** in a Google Sheet you control, so the sheet is always current. It needs three environment variables; without them, the sync is silently skipped and everything else keeps working.
+There is no export button — instead, every time a property is created, edited, or deleted, the backend automatically clears and rewrites a tab named **Onboarding Tracker** in a Google Sheet you control, so the sheet is always current. It needs three environment variables; without them, the sync is silently skipped and everything else keeps working.
 
 1. In [Google Cloud Console](https://console.cloud.google.com/), create a project (or reuse one) and enable the **Google Sheets API**.
 2. Create a **Service Account** (IAM & Admin → Service Accounts), then create a JSON key for it and download it.
