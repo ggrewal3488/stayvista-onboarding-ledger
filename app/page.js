@@ -108,7 +108,7 @@ export default function Page() {
       <header className="top">
         <div>
           <p className="eyebrow">StayVista Operations · Self-Operated Properties</p>
-          <h1 className="title">Onboarding Ledger</h1>
+          <h1 className="title">Onboarding Tracker</h1>
           <p className="sub">Acquisition through go-live — one record per property, from signed agreement to post-launch trackers.</p>
         </div>
         <div className="top-actions">
